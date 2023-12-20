@@ -6,5 +6,6 @@ const { verifyToken, isAdmin } = require('../middleware/authMiddleware')
 adminRouter.post('/create-admin', adminController.createAdmin)
 adminRouter.post('/login-admin', adminController.loginAdmin)
 adminRouter.get('/get-admin', isAdmin, adminController.getAdmin)
+adminRouter.post('/verify-shop/:shopId', isAdmin, adminController.verifyShop);
 
 module.exports = adminRouter;

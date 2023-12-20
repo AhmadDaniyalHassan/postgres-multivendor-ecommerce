@@ -47,8 +47,8 @@ exports.isShopOwner = async (req, res, next) => {
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const shop = await ShopUser.findByPk(decoded.id);
-        if (!shop || shop.role !== 2) {
-            return res.status(403).send({ success: false, message: 'Unauthorized Access - Shop role required' });
+        if (!shop || shop.role !== 2 || shop.verified === false) {
+            return res.status(403).send({ success: false, message: `Unauthorized Access - Shop Role Required Or Shop Isn't Approved Yet By Admin` });
         }
         req.shop = shop;
         next();

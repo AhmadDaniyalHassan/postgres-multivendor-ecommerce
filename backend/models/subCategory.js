@@ -1,6 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
 const Category = require("./category");
+const Product = require('./product')
+
 const SubCategory = sequelize.define("SubCategory", {
     id: {
         type: DataTypes.UUID,
@@ -16,9 +18,22 @@ const SubCategory = sequelize.define("SubCategory", {
             },
         },
     },
+    image: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: false,
+        validate: {
+            notNull: {
+                msg: "Please provide Category image.",
+            }
+        }
+    },
 });
 
 Category.hasMany(SubCategory, { onDelete: 'CASCADE' });
 SubCategory.belongsTo(Category, { onDelete: 'CASCADE' });
+
+
+SubCategory.hasMany(Product, { onDelete: 'CASCADE' });
+Product.belongsTo(SubCategory, { onDelete: 'CASCADE' });
 
 module.exports = SubCategory;

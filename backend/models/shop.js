@@ -26,6 +26,11 @@ const ShopUser = sequelize.define("shopUser", {
             },
         },
     },
+    verified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false, // Set default value to false, indicating not verified
+    },
     email: {
         type: DataTypes.STRING,
         unique: true,
@@ -45,7 +50,7 @@ const ShopUser = sequelize.define("shopUser", {
             },
         },
     },
-    productWearHouse: {
+    productWearHouseAddress: {
         type: DataTypes.STRING,
         unique: true,
         allowNull: false,

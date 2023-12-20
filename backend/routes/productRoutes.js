@@ -10,7 +10,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-productRouter.post('/create-product', isShopOwner, productController.createProduct)
+productRouter.post('/create-product', upload.array('images'), isShopOwner, productController.createProduct)
 productRouter.get('/get-product', isShopOwner, productController.getProduct)
 
 module.exports = productRouter;

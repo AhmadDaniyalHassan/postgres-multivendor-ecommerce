@@ -3,13 +3,19 @@ const cloudinary = require('cloudinary');
 const Category = require('../models/category');
 const ShopUser = require('../models/shop');
 const SubCategory = require('../models/subCategory');
+const fs = require('fs');
 const createProduct = async (req, res) => {
     try {
-        const { productName, productDescription, inStock, price, CategoryId, shopUserId } = req.body;
-
+        const { productName, productDescription, inStock, price, CategoryId, shopUserId, SubCategoryId, quantity } = req.body;
+        const images = []
         // Validate required fields
-        if (!productName || !productDescription || !inStock || !price || !CategoryId || !shopUserId) {
+        if (!productName || !productDescription || !inStock || !price || !CategoryId || !shopUserId || !SubCategoryId || !quantity || !images) {
             return res.status(400).json({ success: false, message: "Required fields are missing." });
+        }
+        for (const file of req.files) {
+            const result = await cloudinary.uploader.upload(file.path);
+            images.push(result.secure_url);
+            fs.unlinkSync(file.path); // Uncomment this line if you want to delete the uploaded files locally
         }
         // Create the product
         const product = await Product.create({
@@ -19,6 +25,9 @@ const createProduct = async (req, res) => {
             price,
             CategoryId,
             shopUserId,
+            SubCategoryId,
+            quantity,
+            images: images
         });
 
         res.status(201).json({ success: true, message: "Product created successfully", product: product });
@@ -35,7 +44,7 @@ const getProduct = async (req, res) => {
                     model: Category,
                     attributes: ['id', 'name'],
                     include: [
-                        { model: SubCategory, attributes: ['id', 'name'] }, // Include SubCategory data through Category
+                        { model: SubCategory, attributes: ['id', 'name', 'image'] }, // Include SubCategory data through Category
                     ],
                 },
                 {

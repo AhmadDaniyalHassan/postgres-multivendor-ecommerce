@@ -17,6 +17,24 @@ const Product = sequelize.define("Product", {
             },
         },
     },
+    quantity: {
+        type: DataTypes.DECIMAL(10, 0), // 10 total digits, 0 decimal places
+        allowNull: false,
+        validate: {
+            notNull: {
+                msg: "Please Provide Product Quantity.",
+            },
+        },
+    },
+    images: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: false,
+        validate: {
+            notNull: {
+                msg: "Please provide product image.",
+            }
+        }
+    },
     productDescription: {
         type: DataTypes.STRING,
         unique: true,
@@ -50,5 +68,7 @@ const Product = sequelize.define("Product", {
 
 ShopUser.hasMany(Product, { onDelete: 'CASCADE' });
 Product.belongsTo(ShopUser, { onDelete: 'CASCADE' });
+
+
 
 module.exports = Product;

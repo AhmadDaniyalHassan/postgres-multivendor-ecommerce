@@ -1,7 +1,7 @@
 const Admin = require('../models/admin');
 const { hashPassword, comparePassword } = require('../helper/passwordHelper');
 const JWT = require('jsonwebtoken');
-
+const ShopUser = require('../models/shop');
 const createAdmin = async (req, res) => {
     try {
         const { username, email, password, address } = req.body;
@@ -49,5 +49,24 @@ const getAdmin = async (req, res) => {
         res.status(500).send({ message: error.message })
     }
 }
+const verifyShop = async (req, res) => {
+    try {
+        const shopId = req.params.shopId;
+        const shop = await ShopUser.findByPk(shopId);
 
-module.exports = { createAdmin, getAdmin, loginAdmin };
+        if (!shop) {
+            return res.status(404).send({ message: 'Shop not found' });
+        }
+
+        // Update the shop's verified status to true
+        shop.verified = true;
+        await shop.save();
+
+        res.status(200).send({ message: 'Shop verified successfully', shop: shop });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send(error);
+    }
+}
+
+module.exports = { createAdmin, getAdmin, loginAdmin, verifyShop };

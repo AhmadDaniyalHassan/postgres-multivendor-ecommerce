@@ -4,11 +4,11 @@ const JWT = require('jsonwebtoken');
 
 const createShop = async (req, res) => {
     try {
-        const { shopName, shopOwner, email, password, productWearHouse, shopHandlerAddress, shopPhoneNumber } = req.body
+        const { shopName, shopOwner, email, password, productWearHouseAddress, shopHandlerAddress, shopPhoneNumber } = req.body
         const hashedPassword = await hashPassword(password);
-        const shop = new ShopUser({ shopName, shopOwner, email, password: hashedPassword, productWearHouse, shopHandlerAddress, shopPhoneNumber });
+        const shop = new ShopUser({ shopName, shopOwner, email, password: hashedPassword, productWearHouseAddress, shopHandlerAddress, shopPhoneNumber, verified: false, });
         await shop.save()
-        res.status(201).send({ message: "shop created successfully", shop: shop })
+        res.status(201).send({ message: "shop created successfully", message: "You Can Access Your Shop After Admin Approved Your SHop Request", shop: shop })
         console.log(shop)
     } catch (error) {
         console.log(error)
@@ -22,6 +22,9 @@ const loginShop = async (req, res) => {
         const shopUser = await ShopUser.findOne({ email });
         if (!shopUser) {
             return res.status(400).send({ message: "shopUser not found" })
+        }
+        if (shopUser.verified === false) {
+            return res.status(400).send({ message: "Shop Isn't Approved By Admin Please Try Again logging in after 1 to 2 working days" })
         }
         const match = await comparePassword(password, shopUser.password);
         if (!match) {
