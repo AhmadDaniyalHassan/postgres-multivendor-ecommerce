@@ -69,4 +69,56 @@ const verifyShop = async (req, res) => {
     }
 }
 
-module.exports = { createAdmin, getAdmin, loginAdmin, verifyShop };
+const editAdmin = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+        const { username, email, password, address } = req.body;
+
+        // Find the admin by ID
+        const admin = await Admin.findByPk(adminId);
+
+        if (!admin) {
+            return res.status(404).send({ message: "Admin not found" });
+        }
+
+        // Update admin fields
+        admin.username = username || admin.username;
+        admin.email = email || admin.email;
+        if (password) {
+            const hashedPassword = await hashPassword(password);
+            admin.password = hashedPassword;
+        }
+        admin.address = address || admin.address;
+
+        // Save the updated admin
+        await admin.save();
+
+        res.status(200).send({ message: "Admin updated successfully", admin: admin });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: error.message });
+    }
+}
+
+const deleteAdmin = async (req, res) => {
+    try {
+        const adminId = req.params.adminId;
+
+        // Find the admin by ID
+        const admin = await Admin.findByPk(adminId);
+
+        if (!admin) {
+            return res.status(404).send({ message: "Admin not found" });
+        }
+
+        // Delete the admin
+        await admin.destroy();
+
+        res.status(200).send({ message: "Admin deleted successfully" });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: error.message });
+    }
+}
+
+module.exports = { createAdmin, getAdmin, loginAdmin, verifyShop, editAdmin, deleteAdmin };

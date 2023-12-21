@@ -61,4 +61,100 @@ const getProduct = async (req, res) => {
     }
 }
 
-module.exports = { createProduct, getProduct };
+const extractPublicIdFromUrl = (url) => {
+    const startIndex = url.lastIndexOf("/") + 1;
+    const endIndex = url.lastIndexOf(".");
+    return url.substring(startIndex, endIndex);
+};
+const editProduct = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const { productName, productDescription, inStock, price, CategoryId, SubCategoryId, quantity } = req.body;
+
+        // Find the product by ID
+        let product = await Product.findByPk(productId);
+
+        if (!product) {
+            return res.status(404).send({ message: "Product not found" });
+        }
+
+        // Fetch existing images URLs
+        const existingImages = product.images || [];
+
+        // Update product fields
+        await product.update({
+            productName: productName || product.productName,
+            productDescription: productDescription || product.productDescription,
+            inStock: inStock || product.inStock,
+            price: price || product.price,
+            CategoryId: CategoryId || product.CategoryId,
+            SubCategoryId: SubCategoryId || product.SubCategoryId,
+            quantity: quantity || product.quantity,
+        });
+
+        // Handle image update
+        if (req.files && req.files.length > 0) {
+            const newImages = [];
+            for (const file of req.files) {
+                const result = await cloudinary.uploader.upload(file.path);
+                newImages.push(result.secure_url);
+                fs.unlinkSync(file.path); // Uncomment this line if you want to delete the uploaded files locally
+            }
+            // Replace existing images with new images
+            await product.update({ images: newImages });
+            // Delete previous images from Cloudinary
+            for (const url of existingImages) {
+                const publicId = extractPublicIdFromUrl(url);
+                try {
+                    await cloudinary.uploader.destroy(publicId);
+                    console.log(`Deleted image from Cloudinary: ${publicId}`);
+                } catch (deleteError) {
+                    console.error(`Error deleting image from Cloudinary: ${publicId}`, deleteError);
+                }
+            }
+        }
+        // Reload the product to get the updated instance
+        const updatedProduct = await product.reload();
+
+        res.status(200).send({ message: "Product updated successfully", product: updatedProduct });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: error.message });
+    }
+};
+
+const deleteProduct = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        // Find the product by ID
+        const product = await Product.findByPk(productId);
+        if (!product) {
+            return res.status(404).send({ message: "Product not found" });
+        }
+        const extractPublicIdFromUrl = (url) => {
+            const startIndex = url.lastIndexOf("/") + 1;
+            const endIndex = url.lastIndexOf(".");
+            return url.substring(startIndex, endIndex);
+        };
+        // Fetch existing images URLs
+        const existingImages = product.images || [];
+        // Delete the product
+        await product.destroy();
+        // Delete Cloudinary images associated with the product
+        for (const url of existingImages) {
+            const publicId = extractPublicIdFromUrl(url);
+            try {
+                await cloudinary.uploader.destroy(publicId);
+                console.log(`Deleted image from Cloudinary: ${publicId}`);
+            } catch (deleteError) {
+                console.error(`Error deleting image from Cloudinary: ${publicId}`, deleteError);
+            }
+        }
+        res.status(200).send({ message: "Product deleted successfully" });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: error.message });
+    }
+};
+
+module.exports = { createProduct, getProduct, editProduct, deleteProduct };

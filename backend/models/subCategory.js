@@ -33,7 +33,7 @@ Category.hasMany(SubCategory, { onDelete: 'CASCADE' });
 SubCategory.belongsTo(Category, { onDelete: 'CASCADE' });
 
 
-SubCategory.hasMany(Product, { onDelete: 'CASCADE' });
-Product.belongsTo(SubCategory, { onDelete: 'CASCADE' });
+SubCategory.hasMany(Product);
+Product.belongsTo(SubCategory);
 
 module.exports = SubCategory;

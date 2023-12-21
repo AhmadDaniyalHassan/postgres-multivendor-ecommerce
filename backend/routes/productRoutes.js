@@ -12,5 +12,7 @@ cloudinary.config({
 
 productRouter.post('/create-product', upload.array('images'), isShopOwner, productController.createProduct)
 productRouter.get('/get-product', isShopOwner, productController.getProduct)
+productRouter.put('/edit-product/:productId', isShopOwner,upload.array('images'), productController.editProduct);
+productRouter.delete('/delete-product/:productId', isShopOwner, productController.deleteProduct);
 
 module.exports = productRouter;

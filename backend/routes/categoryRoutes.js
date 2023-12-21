@@ -12,18 +12,15 @@ cloudinary.config({
 
 categoryRouter.post('/create-category', categoryController.createCategory)
 categoryRouter.get('/get-category', categoryController.getCategory)
-categoryRouter.get('/get-only-category', categoryController.getOnlyCategory)
+categoryRouter.get('/get-only-category/:id', categoryController.getOnlyCategory);
 categoryRouter.put('/edit-category/:id', categoryController.editCategory)
 categoryRouter.delete('/delete-category/:id', categoryController.deleteCategory)
-
 categoryRouter.get('/category/:name', categoryController.getCategoryWithProducts)
-
 
 //sub Category
 categoryRouter.post('/create-sub-category/:id', upload.array('image'), categoryController.createSubCategory)
 categoryRouter.get('/get-sub-category/:id', categoryController.getSubCategory)
 categoryRouter.get('/get-sub-category/', categoryController.getOnlySubCategory)
-categoryRouter.put('/edit-sub-category/:id', categoryController.editSubCategory)
-categoryRouter.delete('/delete-sub-category/:id', categoryController.deleteSubCategory)
+categoryRouter.put('/edit-sub-category/:id', upload.array('image'), categoryController.editSubCategory)
 
 module.exports = categoryRouter;

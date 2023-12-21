@@ -1,6 +1,8 @@
 const ShopUser = require('../models/shop');
 const { hashPassword, comparePassword } = require('../helper/passwordHelper');
 const JWT = require('jsonwebtoken');
+const Product = require('../models/product')
+const cloudinary = require('cloudinary');
 
 const createShop = async (req, res) => {
     try {
@@ -53,4 +55,87 @@ const getShop = async (req, res) => {
     }
 }
 
-module.exports = { getShop, createShop, loginShop };
+const editShop = async (req, res) => {
+    try {
+        const shopId = req.params.shopId;
+        const { shopName, shopOwner, email, password, productWearHouseAddress, shopHandlerAddress, shopPhoneNumber } = req.body;
+
+        // Find the shop by ID
+        const shop = await ShopUser.findByPk(shopId);
+
+        if (!shop) {
+            return res.status(404).send({ message: "Shop not found" });
+        }
+
+        // Update shop fields
+        shop.shopName = shopName || shop.shopName;
+        shop.shopOwner = shopOwner || shop.shopOwner;
+        shop.email = email || shop.email;
+        if (password) {
+            const hashedPassword = await hashPassword(password);
+            shop.password = hashedPassword;
+        }
+        shop.productWearHouseAddress = productWearHouseAddress || shop.productWearHouseAddress;
+        shop.shopHandlerAddress = shopHandlerAddress || shop.shopHandlerAddress;
+        shop.shopPhoneNumber = shopPhoneNumber || shop.shopPhoneNumber;
+
+        // Save the updated shop
+        await shop.save();
+
+        res.status(200).send({ message: "Shop updated successfully", shop: shop });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: error.message });
+    }
+}
+
+const deleteShop = async (req, res) => {
+    // Helper function to extract public ID from Cloudinary URL
+    const extractPublicIdFromUrl = (url) => {
+        const startIndex = url.lastIndexOf("/") + 1;
+        const endIndex = url.lastIndexOf(".");
+        return url.substring(startIndex, endIndex);
+    };
+
+    try {
+        const shopId = req.params.shopId;
+
+        // Find the shop by ID with associated products
+        const shop = await ShopUser.findByPk(shopId, {
+            include: [{ model: Product, as: 'Products' }],
+        });
+
+        if (!shop) {
+            return res.status(404).send({ message: "Shop not found" });
+        }
+
+        // Fetch existing image URLs from products
+        let existingImages = [];
+        if (shop.Products) {
+            shop.Products.forEach((product) => {
+                existingImages = existingImages.concat(product.images || []);
+            });
+        }
+
+        // Delete the shop and its associated products
+        await shop.destroy();
+
+        // Delete images from Cloudinary
+        for (const url of existingImages) {
+            const publicId = extractPublicIdFromUrl(url);
+
+            try {
+                await cloudinary.uploader.destroy(publicId);
+                console.log(`Deleted image from Cloudinary: ${publicId}`);
+            } catch (deleteError) {
+                console.error(`Error deleting image from Cloudinary: ${publicId}`, deleteError);
+            }
+        }
+
+        res.status(200).send({ message: "Shop and associated Products deleted successfully" });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: error.message });
+    }
+};
+module.exports = { getShop, createShop, loginShop, editShop, deleteShop };

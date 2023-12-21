@@ -20,7 +20,7 @@ const Category = sequelize.define("Category", {
     },
 });
 
-Category.hasMany(Product, { onDelete: 'CASCADE' });
-Product.belongsTo(Category, { onDelete: 'CASCADE' });
+Category.hasMany(Product);
+Product.belongsTo(Category);
 
 module.exports = Category;

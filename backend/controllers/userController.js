@@ -2,7 +2,6 @@ const User = require('../models/user');
 const JWT = require('jsonwebtoken');
 const { hashPassword, comparePassword } = require('../helper/passwordHelper');
 
-
 const createUser = async (req, res) => {
     try {
         const { username, email, password, address, phoneNumber } = req.body;
@@ -53,4 +52,55 @@ const getUser = async (req, res) => {
     }
 }
 
-module.exports = { createUser, loginUser, getUser };
+const editUser = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const { username, email, password, address, phoneNumber } = req.body;
+
+        // Find the user by ID
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        // Update user fields
+        user.username = username || user.username;
+        user.email = email || user.email;
+        if (password) {
+            const hashedPassword = await hashPassword(password);
+            user.password = hashedPassword;
+        }
+        user.address = address || user.address;
+        user.phoneNumber = phoneNumber || user.phoneNumber;
+
+        // Save the updated user
+        await user.save();
+
+        res.status(200).send({ message: "User updated successfully", user: user });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: error.message });
+    }
+}
+
+const deleteUser = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+
+        // Find the user by ID
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        // Delete the user
+        await user.destroy();
+
+        res.status(200).send({ message: "User deleted successfully" });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+}
+module.exports = { createUser, loginUser, getUser, editUser, deleteUser };

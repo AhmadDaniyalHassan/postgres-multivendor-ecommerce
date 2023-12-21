@@ -16,10 +16,30 @@ const createCategory = async (req, res) => {
 };
 const getOnlyCategory = async (req, res) => {
     try {
-        const categories = await Category.findAll({})
-        res.json(categories);
+        const { id } = req.params;
+
+        const category = await Category.findOne({
+            where: { id: id },
+            include: [
+                {
+                    model: SubCategory,
+                    as: 'SubCategories',
+                    include: [
+                        {
+                            model: Product,
+                            as: 'Products',
+                        },
+                    ],
+                },
+            ],
+        });
+
+        if (!category) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+
+        res.json(category);
     } catch (error) {
-        console.log(error)
         res.status(500).json({ error: error.message });
     }
 }
@@ -45,8 +65,6 @@ const getCategory = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
-
-
 const editCategory = async (req, res) => {
     try {
         const { name } = req.body; // Add this line
@@ -71,27 +89,65 @@ const editCategory = async (req, res) => {
     }
 }
 const deleteCategory = async (req, res) => {
+    // Helper function to extract public ID from Cloudinary URL
+    const extractPublicIdFromUrl = (url) => {
+        const startIndex = url.lastIndexOf("/") + 1;
+        const endIndex = url.lastIndexOf(".");
+        return url.substring(startIndex, endIndex);
+    };
+
     try {
         const { id } = req.params;
-        // Find the category with associated subcategories
-        const category = await Category.findByPk(id);
+        // Find the category with associated subcategories and products
+        const category = await Category.findByPk(id, {
+            include: [
+                { model: SubCategory, as: 'SubCategories' },
+                { model: Product, as: 'Products' },
+            ],
+        });
 
         if (!category) {
             return res.status(404).json({ error: 'Category not found' });
         }
-        // Delete the category and its associated subcategories
-        await category.destroy();
-        // Delete the subcategories
-        await SubCategory.destroy({ where: { categoryId: id } });
-        // Return a success message
 
-        res.json({ message: 'Category and associated SubCategories deleted successfully' });
+        // Fetch existing image URLs from subcategories and products
+        let existingImages = [];
+        if (category.SubCategories) {
+            category.SubCategories.forEach((subCategory) => {
+                existingImages = existingImages.concat(subCategory.image || []);
+            });
+        }
+        if (category.Products) {
+            category.Products.forEach((product) => {
+                existingImages = existingImages.concat(product.images || []);
+            });
+        }
+
+        // Delete the category and its associated subcategories and products
+        await category.destroy();
+
+        // Delete images from Cloudinary
+        for (const url of existingImages) {
+            const publicId = extractPublicIdFromUrl(url);
+
+            try {
+                await cloudinary.uploader.destroy(publicId);
+                console.log(`Deleted image from Cloudinary: ${publicId}`);
+            } catch (deleteError) {
+                console.error(`Error deleting image from Cloudinary: ${publicId}`, deleteError);
+            }
+        }
+
+        res.json({ message: 'Category and associated SubCategories/Products deleted successfully' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
     }
-}
-//Bub Category
+};
+
+
+
+//Sub Category
 const getSubCategory = async (req, res) => {
     try {
         const subCategories = await SubCategory.findAll({
@@ -130,7 +186,6 @@ const createSubCategory = async (req, res) => {
         }
 
         const subCategory = await SubCategory.create({ name, CategoryId: category.id, image: image });
-        console.log("Created SubCategory:", subCategory); // Add this line for debugging
         res.json({ success: true, message: "Category created successfully", subCategory: subCategory });
     } catch (error) {
         console.error("Error:", error); // Add this line for debugging
@@ -138,45 +193,69 @@ const createSubCategory = async (req, res) => {
     }
 }
 const editSubCategory = async (req, res) => {
+    // Helper function to extract public ID from Cloudinary URL
+    const extractPublicIdFromUrl = (url) => {
+        const startIndex = url.lastIndexOf("/") + 1;
+        const endIndex = url.lastIndexOf(".");
+        return url.substring(startIndex, endIndex);
+    };
+
     try {
-        const { name } = req.body; // Add this line
+        const { name } = req.body;
         const { id } = req.params;
-        console.log(id, name)
+
         if (!name) {
             return res.status(400).json({ error: 'Please provide a category name' });
         }
 
-        const category = await SubCategory.findByPk(id);
-        if (!category) {
-            return res.status(404).json({ error: 'Category not found' });
+        // Find the subcategory by ID
+        const subCategory = await SubCategory.findByPk(id);
+
+        if (!subCategory) {
+            return res.status(404).json({ error: 'Subcategory not found' });
         }
 
-        category.name = name;
-        await category.save();
+        // Fetch existing image URLs
+        const existingImages = subCategory.image || [];
 
-        res.json(category);
+        // Update subcategory fields
+        await subCategory.update({ name });
+
+        // Handle image update
+        if (req.files && req.files.length > 0) {
+            const newImages = [];
+
+            for (const file of req.files) {
+                const result = await cloudinary.uploader.upload(file.path);
+                newImages.push(result.secure_url);
+                fs.unlinkSync(file.path); // Uncomment this line if you want to delete the uploaded files locally
+            }
+
+            // Replace existing images with new images
+            await subCategory.update({ image: newImages });
+
+            // Delete previous images from Cloudinary
+            for (const url of existingImages) {
+                const publicId = extractPublicIdFromUrl(url);
+
+                try {
+                    await cloudinary.uploader.destroy(publicId);
+                    console.log(`Deleted image from Cloudinary: ${publicId}`);
+                } catch (deleteError) {
+                    console.error(`Error deleting image from Cloudinary: ${publicId}`, deleteError);
+                }
+            }
+        }
+
+        // Reload the subcategory to get the updated instance
+        const updatedSubCategory = await subCategory.reload();
+
+        res.status(200).json({ message: "Subcategory updated successfully", subCategory: updatedSubCategory });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
-}
-const deleteSubCategory = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const category = await SubCategory.findByPk(id);
-        if (!category) {
-            return res.status(404).json({ error: 'Category not found' });
-        }
-        await category.destroy();
-        res.json({ message: 'SubCategory deleted successfully' });
-
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ error: error.message });
-    }
-}
-
-
+};
 const getCategoryWithProducts = async (req, res) => {
     try {
         const subcategoryName = req.params.name;
@@ -223,7 +302,6 @@ module.exports = {
     createSubCategory,
     editCategory,
     editSubCategory,
-    deleteSubCategory,
     getCategoryWithProducts,
     deleteCategory
 };
