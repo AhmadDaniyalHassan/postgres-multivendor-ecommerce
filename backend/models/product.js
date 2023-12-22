@@ -18,7 +18,7 @@ const Product = sequelize.define("Product", {
         },
     },
     quantity: {
-        type: DataTypes.DECIMAL(10, 0), // 10 total digits, 0 decimal places
+        type: DataTypes.DECIMAL(10, 0),
         allowNull: false,
         validate: {
             notNull: {
@@ -66,9 +66,8 @@ const Product = sequelize.define("Product", {
     },
 });
 
+
 ShopUser.hasMany(Product, { onDelete: 'CASCADE' });
 Product.belongsTo(ShopUser, { onDelete: 'CASCADE' });
-
-
 
 module.exports = Product;

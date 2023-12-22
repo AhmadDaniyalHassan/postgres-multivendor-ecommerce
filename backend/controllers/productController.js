@@ -4,6 +4,9 @@ const Category = require('../models/category');
 const ShopUser = require('../models/shop');
 const SubCategory = require('../models/subCategory');
 const fs = require('fs');
+const Review = require('../models/review');
+const Question = require('../models/question');
+const User = require('../models/user');
 const createProduct = async (req, res) => {
     try {
         const { productName, productDescription, inStock, price, CategoryId, shopUserId, SubCategoryId, quantity } = req.body;
@@ -16,6 +19,9 @@ const createProduct = async (req, res) => {
             const result = await cloudinary.uploader.upload(file.path);
             images.push(result.secure_url);
             fs.unlinkSync(file.path); // Uncomment this line if you want to delete the uploaded files locally
+        }
+        if (images.length === 0) {
+            return res.status(400).json({ success: false, message: "At least one image is required." });
         }
         // Create the product
         const product = await Product.create({
@@ -51,6 +57,14 @@ const getProduct = async (req, res) => {
                     model: ShopUser,
                     attributes: ['id', 'shopName', 'shopOwner', 'shopHandlerAddress', 'shopPhoneNumber'],
                 },
+                {
+                    model: Review,
+                    attributes: ['id', 'rating', 'review'],
+                },
+                {
+                    model: Question,
+                    attributes: ['id', 'question', 'answer'],
+                }
             ],
         });
 
@@ -58,6 +72,52 @@ const getProduct = async (req, res) => {
     } catch (error) {
         console.log(error);
         res.status(500).send(error);
+    }
+}
+
+const getSingleProduct = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+
+        const product = await Product.findOne({
+            where: { id: productId },
+            include: [
+                {
+                    model: Category,
+                    attributes: ['id', 'name'],
+                    include: [
+                        { model: SubCategory, attributes: ['id', 'name', 'image'] },
+                    ],
+                },
+                {
+                    model: ShopUser,
+                    attributes: ['id', 'shopName', 'shopOwner', 'shopHandlerAddress', 'shopPhoneNumber'],
+                },
+                {
+                    model: Review,
+                    attributes: ['id', 'rating', 'review', 'createdAt'],
+                    include: [
+                        { model: User, attributes: ['id', 'username'] }, // Include user information for reviews
+                    ],
+                },
+                {
+                    model: Question,
+                    attributes: ['id', 'question', 'answer', 'createdAt'],
+                    include: [
+                        { model: User, attributes: ['id', 'username'] }, // Include user information for questions
+                    ],
+                },
+            ],
+        });
+
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        res.status(200).json(product);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error in fetching product', error });
     }
 }
 
@@ -157,4 +217,4 @@ const deleteProduct = async (req, res) => {
     }
 };
 
-module.exports = { createProduct, getProduct, editProduct, deleteProduct };
+module.exports = { createProduct, getProduct, editProduct, deleteProduct, getSingleProduct };

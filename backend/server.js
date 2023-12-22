@@ -11,7 +11,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const sequelize = require("./config/db");
 const productRouter = require("./routes/productRoutes");
 const shopRouter = require("./routes/shopRoutes");
-
+const questionRouter = require("./routes/questionRoutes");
+const reviewRouter = require("./routes/reviewRoutes");
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
@@ -22,7 +23,8 @@ app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/product', productRouter)
 app.use('/api/shop', shopRouter)
-
+app.use('/api/question', questionRouter)
+app.use('/api/review', reviewRouter)
 sequelize.sync().then(() => {
   const port = process.env.PORT;
   app.listen(port, () => {
